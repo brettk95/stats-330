@@ -1,0 +1,55 @@
+---
+title: "stats-330-assignment-1"
+author: "Brett Kim"
+date: "24 July 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = FALSE}
+# load the data
+
+library("readr")
+kill_df = read.csv("masskill.csv")
+```
+
+### Question (a)
+```{r, echo = FALSE}
+plot(kill_df$year, kill_df$masskill, main = "Mass Killing Incidents per Year in the US between 1982 ~ 2018", xlab = "Year", ylab = "Mass Killing Incidents")
+```
+
+There appears to be an increasing relationship between mass killing incidents and the year. We can also notice that there is greater variability in the number of mass killing incidents as year increases. From this information one could say there is an approximate increasing relationship but not necessarily linear.
+
+### Question (b)
+```{r, echo = FALSE}
+plot(kill_df$year, kill_df$popn, main = "US Population Growth between 1982 ~ 2018", xlab = "Year", ylab = "Population (100M)")
+```
+
+There is a clear linear positive linear relationship between the population of the US and the year. As year increases, population increases at a linear rate.
+
+### Question (c)
+```{r, echo = FALSE}
+plot(kill_df$year, kill_df$masskill/(kill_df$popn/100), main = "Proportion of Mass Killing Incidents per Year between 1982 ~ 2018", xlab = "Year", ylab = "Mass Killings per 100M people")
+```
+
+This graph of the proportion of mass killings per 100 million population looks pretty much exactly the same as the mass killing incidents per year graph. There is an increasing relationship between the proportion of kills/100M population and the year, while variance in the proportion increases as year increases.
+
+
+### Question (d)
+```{r, echo = FALSE}
+glm(formula = masskill ~ I(year - 1982), family = "poisson", offset = log(popn/100), data = kill_df)
+```
+
+We can conclude that our expected mass killings increases by 0.06 per year. However, our model shows that expected mass killings is a negative in year 0 (1982).
+
+### Question (e)
+Our model is
+$log(\hat{\mu_i}) =  \hat{\beta_0} + \hat{\beta_1}(year_i) + log(\frac{popn}{100})$ 
+
+so $log(\hat{\mu_i}) = -1.26 \ + 0.06(year_i) + log(\frac{popn}{100})$
+
+where $mass \ killings_i \sim Poisson(\mu_i)$
+

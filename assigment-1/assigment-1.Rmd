@@ -32,24 +32,111 @@ There is a clear linear positive linear relationship between the population of t
 
 ### Question (c)
 ```{r, echo = FALSE}
-plot(kill_df$year, kill_df$masskill/(kill_df$popn/100), main = "Proportion of Mass Killing Incidents per Year between 1982 ~ 2018", xlab = "Year", ylab = "Mass Killings per 100M people")
+plot(kill_df$year, kill_df$masskill/(kill_df$popn/100), main = "Proportion of Mass Killing Incidents per 100M people per Year between 1982 ~ 2018", xlab = "Year", ylab = "Mass Killings per 100M people")
 ```
 
-This graph of the proportion of mass killings per 100 million population looks pretty much exactly the same as the mass killing incidents per year graph. There is an increasing relationship between the proportion of kills/100M population and the year, while variance in the proportion increases as year increases.
+We see that despite adjusting for increasing population between 1982 and 2018, there still appears to be an increasing relationship between the mass killing incidents per 100 million people and year.
 
 
 ### Question (d)
 ```{r, echo = FALSE}
 glm(formula = masskill ~ I(year - 1982), family = "poisson", offset = log(popn/100), data = kill_df)
+exp(0.05832)
 ```
 
-We can conclude that our expected mass killings increases by 0.06 per year. However, our model shows that expected mass killings is a negative in year 0 (1982).
+The log of the expected number of mass killings increases by approximately 0.06 per 1 year increase, adjusted for population. However, at year 0 (1982) our model predicts that the log of the expected number of mass killings is negative (-1.264) which is not possible. Exponentiating our model will give the expected number of mass killings in the linear scale. Hence, we see that every 1 year increase correlates with approximately a 1.06 times increase in the number of mass killing incidents, adjusted for population.
 
 ### Question (e)
-Our model is
-$log(\hat{\mu_i}) =  \hat{\beta_0} + \hat{\beta_1}(year_i) + log(\frac{popn}{100})$ 
+Our model is:
 
-so $log(\hat{\mu_i}) = -1.26 \ + 0.06(year_i) + log(\frac{popn}{100})$
+$$
+log(\hat{\mu_i}) = \hat{\beta_0} + \hat{\beta_1}(year_i) + log(\frac{popn}{100})
+$$
 
-where $mass \ killings_i \sim Poisson(\mu_i)$
+backtransforming this we get:
+
+$$
+\begin{aligned}
+  e^{log(\hat{\mu_i)}} &= e^{\hat{\beta_0} + \hat{\beta_1}(year_i) + log(\frac{popn}{100})} \\
+  \hat{\mu_i} &= e^{\hat{\beta_0}} \times e^{\hat{\beta_1}year_i} \times \frac{popn}{100}
+\end{aligned}
+$$
+
+where:
+
+$$
+mass \ killings_i \sim Poisson(\hat{\mu_i})
+$$
+
+### Question (f)
+```{r, echo = FALSE}
+glm(formula = masskill ~ I(year-1982)+I((year-1982)^2), family = "poisson", offset = log(popn/100), data = kill_df)
+```
+
+### Question (h)
+
+```{r}
+x = glm(formula = masskill ~ I(year-1982), family = "poisson", offset = log(popn/100), data = kill_df)
+predictions = predict(x, se.fit = TRUE)
+
+plot(kill_df$year, kill_df$masskill)
+lines(x = kill_df$year, y = exp(predictions$fit))
+lines(x = kill_df$year, y = exp(predictions$fit - 1.96*predictions$se.fit), col = 'blue')
+lines(x = kill_df$year, y = exp(predictions$fit + 1.96*predictions$se.fit), col = 'blue')
+```
+
+
+### Question (i)
+```{r, echo = FALSE}
+x = glm(formula = masskill ~ I(year-1982)+I((year-1982)^2), family = "poisson", offset = log(popn/100), data = kill_df)
+prediction_2 = predict(x, se.fit = TRUE)
+plot(kill_df$year, kill_df$masskill)
+lines(x = kill_df$year, y = exp(prediction_2$fit))
+lines(x = kill_df$year, y = exp(prediction_2$fit - 1.96*prediction_2$se.fit), col = 'blue')
+lines(x = kill_df$year, y = exp(prediction_2$fit + 1.96*prediction_2$se.fit), col = 'blue')
+```
+
+
+###Question (j)
+```{r}
+popn_2019 = 327170000/1000000
+x = coef(glm(formula = masskill ~ I(year-1982), family = "poisson", offset = log(popn/100), data = kill_df))
+
+lambda_linear = exp(as.numeric(x[1]))*exp(as.numeric(x[2])*37)*(popn_2019/100)
+se_lambda_linear = sqrt(lambda_linear/popn_2019)
+
+print(paste(lambda_linear - 1.96*se_lambda_linear, lambda_linear + 1.96*se_lambda_linear))
+```
+The 95% confidence interval of the mean number of mass killings in 2019 using the linear poisson model is between 7.688 and 8.301.
+
+```{r}
+y = coef(glm(formula = masskill ~ I(year-1982)+I((year-1982)^2), family = "poisson", offset = log(popn/100), data = kill_df))
+
+lambda_quad = exp(as.numeric(y[1]))*exp(as.numeric(y[2])*37)*exp(as.numeric(y[3])*(37^2))*(popn_2019/100)
+se_lambda_quad = sqrt(lambda_linear/popn_2019)
+
+print(paste(lambda_quad - 1.96 * se_lambda_quad, lambda_quad + 1.96 * se_lambda_quad))
+```
+
+The 95% confidence interval of the mean number of mass killings in 2019 using the quadratic poisson model is between 11.084 and 11.697.
+
+### Question (k)
+
+```{r}
+pred.mean.lin = lambda_linear/2
+barplot(dpois(0:15, pred.mean.lin),ylab = "Probability", xlab = "Killing Incidents", main = paste("Distribution of Poisson with mean", round(pred.mean.lin,2), "mass killings per year"), space = 1, names.arg = 0:15)
+```
+
+```{r}
+pred.mean.quad = lambda_quad/2
+barplot(dpois(0:15, pred.mean.quad),ylab = "Probability", xlab = "Killing Incidents", main = paste("Distribution of Poisson with mean", round(pred.mean.quad,2), "mass killings per year"), space = 1, names.arg = 0:15)
+```
+
+From our two distributions it appears that the linear poisson model is the most appropriate given that there have been four mass killing incidents in the first half year of 2019 (January to June). The linear model is more appropriate given this data because it predicts a higher probability of 4 killing incidents compared to the quadratic model.
+
+
+### Question (l)
+
+
+
 

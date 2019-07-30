@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r, echo = FALSE}
+```{r}
 # load the data
 
 library("readr")
@@ -17,34 +17,35 @@ kill_df = read.csv("masskill.csv")
 ```
 
 ### Question (a)
-```{r, echo = FALSE}
+```{r}
 plot(kill_df$year, kill_df$masskill, main = "Mass Killing Incidents per Year in the US between 1982 ~ 2018", xlab = "Year", ylab = "Mass Killing Incidents")
 ```
 
-There appears to be an increasing relationship between mass killing incidents and the year. We can also notice that there is greater variability in the number of mass killing incidents as year increases. From this information one could say there is an approximate increasing relationship but not necessarily linear.
+There appears to be an increasing relationship between mass killing incidents and the year. We also notice that there is greater variability in the number of mass killing incidents as year increases. From this information one could say there is an approximate increasing relationship, but not necessarily a positive linear relationship, between year and mass killing incidents.
 
 ### Question (b)
-```{r, echo = FALSE}
+```{r}
 plot(kill_df$year, kill_df$popn, main = "US Population Growth between 1982 ~ 2018", xlab = "Year", ylab = "Population (100M)")
 ```
 
-There is a clear linear positive linear relationship between the population of the US and the year. As year increases, population increases at a linear rate.
+There is a clear positive linear relationship between the population of the US and the year. As year increases, population appears to increase linearly.
 
 ### Question (c)
-```{r, echo = FALSE}
+```{r}
 plot(kill_df$year, kill_df$masskill/(kill_df$popn/100), main = "Proportion of Mass Killing Incidents per 100M people per Year between 1982 ~ 2018", xlab = "Year", ylab = "Mass Killings per 100M people")
 ```
 
-We see that despite adjusting for increasing population between 1982 and 2018, there still appears to be an increasing relationship between the mass killing incidents per 100 million people and year.
+We see that despite adjusting for the increase in population between 1982 and 2018, there still appears to be an increasing relationship between year and the mass killing incidents per 100 million people.
 
 
 ### Question (d)
-```{r, echo = FALSE}
-glm(formula = masskill ~ I(year - 1982), family = "poisson", offset = log(popn/100), data = kill_df)
-exp(0.05832)
+```{r}
+linear_model = glm(formula = masskill ~ I(year - 1982), family = "poisson", offset = log(popn/100), data = kill_df)
+linear_model
+exp(coef(linear_model)[2])
 ```
 
-The log of the expected number of mass killings increases by approximately 0.06 per 1 year increase, adjusted for population. However, at year 0 (1982) our model predicts that the log of the expected number of mass killings is negative (-1.264) which is not possible. Exponentiating our model will give the expected number of mass killings in the linear scale. Hence, we see that every 1 year increase correlates with approximately a 1.06 times increase in the number of mass killing incidents, adjusted for population.
+The log of the expected number of mass killings per 100M people increases by approximately 0.06 per 1 year increase. However, at year 0 (1982) our model predicts that the log of the expected number of mass killings is negative (-1.264) so would only make sense when backtransformed by exponentiating, and we would expect it to be close to 0. Exponentiating our model will give the expected number of mass killings per 100M people in the linear scale. Hence, we see that for every 1 year increase there is a multiple of 1.06 times increase in the number of mass killing incidents, adjusted for population.
 
 ### Question (e)
 Our model is:
@@ -65,13 +66,23 @@ $$
 where:
 
 $$
-mass \ killings_i \sim Poisson(\hat{\mu_i})
+Y_i = mass \ killings_i \sim Poisson(\hat{\mu_i})
 $$
 
+and $\mu_i$ is the mean rate i.e. expected mass killings per 100M people.
+
+
 ### Question (f)
-```{r, echo = FALSE}
-glm(formula = masskill ~ I(year-1982)+I((year-1982)^2), family = "poisson", offset = log(popn/100), data = kill_df)
+```{r}
+quadratic_model = glm(formula = masskill ~ I(year-1982)+I((year-1982)^2), family = "poisson", offset = log(popn/100), data = kill_df)
+quadratic_model
+
+exp(coef(quadratic_model)[1])
+exp(coef(quadratic_model)[2])
+exp(coef(quadratic_model)[3])
 ```
+
+With the quadratic model we actually see that the log of the mean rate decreases by 0.039 every 1 year increase, however, it also increases by 0.002 for every squared year increase. This would suggest that the effect of year on the log of the expected mass killings per 100M people becomes greater as year increases. Backtransforming our results we find that at year 0 the expected mass killings per 100M people is around 0.6. For every year increase there the expected mass killings per 100M people is multiplied by 0.96 (i.e. decreases) but is also multiplied by 1.002 for every squared year increase.
 
 ### Question (h)
 
@@ -84,10 +95,10 @@ lines(x = kill_df$year, y = exp(predictions$fit))
 lines(x = kill_df$year, y = exp(predictions$fit - 1.96*predictions$se.fit), col = 'blue')
 lines(x = kill_df$year, y = exp(predictions$fit + 1.96*predictions$se.fit), col = 'blue')
 ```
-
+The linear model fits the data fairly well. The mean line appears to capture the overall shape of the data. However, many of our observed data points lie outside of our predicted 95% confidence interval.
 
 ### Question (i)
-```{r, echo = FALSE}
+```{r}
 x = glm(formula = masskill ~ I(year-1982)+I((year-1982)^2), family = "poisson", offset = log(popn/100), data = kill_df)
 prediction_2 = predict(x, se.fit = TRUE)
 plot(kill_df$year, kill_df$masskill)
@@ -95,14 +106,13 @@ lines(x = kill_df$year, y = exp(prediction_2$fit))
 lines(x = kill_df$year, y = exp(prediction_2$fit - 1.96*prediction_2$se.fit), col = 'blue')
 lines(x = kill_df$year, y = exp(prediction_2$fit + 1.96*prediction_2$se.fit), col = 'blue')
 ```
-
+The quadratic model also appears to fit the data quite well upon visual inspection. The predicted 95% confidence intervals seem to capture the variance of the data a little bit better than the linear model, especially as year increases. However, the 95% confidence interval flares out at the left hand wise of the graph, which kind of goes against our intuition that variability increases as year increases, meaning the 95% confidence interval should be smaller at the start.
 
 ###Question (j)
 ```{r}
 popn_2019 = 327170000/1000000
-x = coef(glm(formula = masskill ~ I(year-1982), family = "poisson", offset = log(popn/100), data = kill_df))
 
-lambda_linear = exp(as.numeric(x[1]))*exp(as.numeric(x[2])*37)*(popn_2019/100)
+lambda_linear = exp(as.numeric(coef(linear_model)[1]))*exp(as.numeric(coef(linear_model)[2])*37)*(popn_2019/100)
 se_lambda_linear = sqrt(lambda_linear/popn_2019)
 
 print(paste(lambda_linear - 1.96*se_lambda_linear, lambda_linear + 1.96*se_lambda_linear))
@@ -110,9 +120,7 @@ print(paste(lambda_linear - 1.96*se_lambda_linear, lambda_linear + 1.96*se_lambd
 The 95% confidence interval of the mean number of mass killings in 2019 using the linear poisson model is between 7.688 and 8.301.
 
 ```{r}
-y = coef(glm(formula = masskill ~ I(year-1982)+I((year-1982)^2), family = "poisson", offset = log(popn/100), data = kill_df))
-
-lambda_quad = exp(as.numeric(y[1]))*exp(as.numeric(y[2])*37)*exp(as.numeric(y[3])*(37^2))*(popn_2019/100)
+lambda_quad = exp(as.numeric(coef(quadratic_model)[1]))*exp(as.numeric(coef(quadratic_model)[2])*37)*exp(as.numeric(y[3])*(37^2))*(popn_2019/100)
 se_lambda_quad = sqrt(lambda_linear/popn_2019)
 
 print(paste(lambda_quad - 1.96 * se_lambda_quad, lambda_quad + 1.96 * se_lambda_quad))
@@ -124,15 +132,15 @@ The 95% confidence interval of the mean number of mass killings in 2019 using th
 
 ```{r}
 pred.mean.lin = lambda_linear/2
-barplot(dpois(0:15, pred.mean.lin),ylab = "Probability", xlab = "Killing Incidents", main = paste("Distribution of Poisson with mean", round(pred.mean.lin,2), "mass killings per year"), space = 1, names.arg = 0:15)
+barplot(dpois(0:15, pred.mean.lin),ylab = "Probability", xlab = "Killing Incidents", main = paste("Distribution of Poisson with mean", round(pred.mean.lin,2), "mass killings per half year"), space = 1, names.arg = 0:15)
 ```
 
 ```{r}
 pred.mean.quad = lambda_quad/2
-barplot(dpois(0:15, pred.mean.quad),ylab = "Probability", xlab = "Killing Incidents", main = paste("Distribution of Poisson with mean", round(pred.mean.quad,2), "mass killings per year"), space = 1, names.arg = 0:15)
+barplot(dpois(0:15, pred.mean.quad),ylab = "Probability", xlab = "Killing Incidents", main = paste("Distribution of Poisson with mean", round(pred.mean.quad,2), "mass killings per half year"), space = 1, names.arg = 0:15)
 ```
 
-From our two distributions it appears that the linear poisson model is the most appropriate given that there have been four mass killing incidents in the first half year of 2019 (January to June). The linear model is more appropriate given this data because it predicts a higher probability of 4 killing incidents compared to the quadratic model.
+From our two distributions it appears that the linear poisson model is the more appropriate model given that there have been four mass killing incidents in the first half year of 2019 (January to June). The linear model is more appropriate given this data because it predicts a higher probability of 4 mass killing incidents compared to the quadratic model.
 
 
 ### Question (l)
